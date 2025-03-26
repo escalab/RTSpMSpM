@@ -1,0 +1,40 @@
+#ignore temporary file
+/.vscode/
+**/.ipynb_checkpoints/*
+NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64.sh
+
+#ignore binary
+**/build/*
+!/build/.gitkeep
+**/bin/*
+!/build/.gitkeep
+/build*/*
+
+#ignore temp file (but keep the directory)
+**/output/**
+!/output/.gitkeep
+**/prof/**
+!/prof/.gitkeep
+**/data/**
+!/data/download_data.sh
+
+#ignore mtx input output file
+*.mtx
+*.txt
+*.csv
+*.data*
+
+/MaxK-GNN/*
+
+# We want this directory for sample input
+!OptixSDK/NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64/SDK/data
+!/data/.gitkeep
+
+#ignore Cache
+CMakeCache.txt
+*.o
+*.cmake
+
+#ignore profiling files
+*.sqlite
+*.nsys-rep
