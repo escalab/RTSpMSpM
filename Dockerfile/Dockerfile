@@ -31,8 +31,8 @@ RUN apt-get update && \
 #     rm nsight-systems-2024.5.1_2024.5.1.113-1_amd64.deb
 
 # Set environment variables for Miniconda and binaries
-ENV PATH=/root/miniconda3/bin:$PATH
-ENV PATH=/usr/local/bin:$PATH
+ENV PATH /root/miniconda3/bin:$PATH
+ENV PATH /usr/local/bin:$PATH
 
 # Install Optix Libraries
 # OpenGL, RandR, Xinerama, Xcursor
@@ -53,9 +53,9 @@ RUN apt-get update && \
 
 
 # Set environment variables
-ENV PATH="/usr/bin:${PATH}"
+ENV PATH "/usr/bin:${PATH}"
 # ENV PATH=$PATH:/opt/nvidia/nsight-compute/2023.3.0/host/target-linux-x64
-ENV LD_LIBRARY_PATH="/home/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH "/home/lib:${LD_LIBRARY_PATH}"
 
 # # Install NVIDIA OptiX SDK
 # RUN wget https://developer.nvidia.com/downloads/designworks/optix/secure/8.0.0/nvidia-optix-sdk-8.0.0-linux64-x86_64.sh
@@ -68,10 +68,9 @@ ENV LD_LIBRARY_PATH="/home/lib:${LD_LIBRARY_PATH}"
 # ENV OPTIX_ROOT=/opt/optix/NVIDIA-OptiX-SDK-7.0.0-linux64
 # ENV PATH=$PATH:$OPTIX_ROOT/bin
 # ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OPTIX_ROOT/lib64
-ENV OPTIX_INSTALL_PATH=/home/RTSpMSpM/optixSpMSpM
+ENV OPTIX_INSTALL_PATH /home/RTSpMSpM/optixSpMSpM
 ENV -v /tmp/.X11-unix:/tmp/.X11-unix
-ENV DISPLAY=$DISPLAY
-ENV NVIDIA_DRIVER_CAPABILITIES=all
+ENV NVIDIA_DRIVER_CAPABILITIES all
 WORKDIR /home
 
 # Define entry point
