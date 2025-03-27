@@ -58,6 +58,7 @@ void printUsageAndExit( const char* argv0 )
     std::cerr << "Options: --output | -o <filename>    Specify file for image output\n";
     std::cerr << "         --mat1 | -m1 <filename>     Specify file for matrix 1\n";
     std::cerr << "         --mat2 | -m2 <filename>     Specify file for matrix 2\n";
+    std::cerr << "         --log  | -l  <filename>     Specify file for log\n";
     std::cerr << "         --help | -h                 Print this usage message\n";
     exit( 1 );
 }
@@ -94,7 +95,7 @@ void getComputeType( cusparseSpMatDescr_t mat )
     }
 }
 
-int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string outfile )
+int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string outfile, std:: string logFile )
 {
     // Start timer
     Timing::reset();
@@ -353,7 +354,7 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
     free(hC_values_tmp);
 
     // Stop timer
-    Timing::flushTimer();
+    Timing::flushTimer(logFile);
     // auto stop = high_resolution_clock::now();
     // auto end2end = duration_cast<nanoseconds>(stop - start);
     // std::cout << "END_TO_END_LATENCY = " << end2end.count() << std::endl;
@@ -361,7 +362,7 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
     return EXIT_SUCCESS;
 }
 
-int compute ( std::string matrix1File, std::string matrix2File, std:: string outfile ) {
+int compute ( std::string matrix1File, std::string matrix2File, std:: string outfile, std:: string logFile) {
     // Start timer
     auto start = high_resolution_clock::now();
     Timing::reset();
@@ -581,7 +582,7 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
     free(hC_values_tmp);
 
     // Stop timer
-    Timing::flushTimer();
+    Timing::flushTimer(logFile);
     // auto stop = high_resolution_clock::now();
     // auto end2end = duration_cast<nanoseconds>(stop - start);
     // std::cout << "END_TO_END_LATENCY, " << end2end.count() << std::endl;
@@ -595,6 +596,7 @@ int main( int argc, char* argv[] )
     std::string      matrix1File( "" );
     std::string      matrix2File( "" );
     std::string      outfile( "" );
+    std::string      logFile( "" );
 
     for( int i = 1; i < argc; ++i )
     {
@@ -628,6 +630,13 @@ int main( int argc, char* argv[] )
                 printUsageAndExit(argv[0]);
             }
         }
+        else if (arg == "--log" || arg == "-l") {
+            if (i < argc - 1) {
+                logFile = argv[++i];
+            } else {
+                printUsageAndExit(argv[0]);
+            }
+        }
         else
         {
             std::cerr << "Unknown option " << arg << "\n";
@@ -637,12 +646,12 @@ int main( int argc, char* argv[] )
 
     try{
         #ifdef REUSE
-            if (reuseCompute(matrix1File, matrix2File, outfile) == EXIT_FAILURE) {
+            if (reuseCompute(matrix1File, matrix2File, outfile, logFile) == EXIT_FAILURE) {
                 throw std::runtime_error("reuseCompute() returned EXIT_FAILURE");
             }
             // std::cerr << "Running Reuse" << "\n";
         #else
-            if (compute(matrix1File, matrix2File, outfile) == EXIT_FAILURE) {
+            if (compute(matrix1File, matrix2File, outfile, logFile) == EXIT_FAILURE) {
                 throw std::runtime_error("compute() returned EXIT_FAILURE");
             }
             // std::cerr << "Running Compute" << "\n"; 

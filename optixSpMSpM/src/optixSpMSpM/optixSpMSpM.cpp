@@ -55,6 +55,7 @@ void printUsageAndExit( const char* argv0 )
     std::cerr << "Options: --output | -o <filename>    Specify file for image output\n";
     std::cerr << "         --mat1 | -m1 <filename>     Specify file for matrix 1\n";
     std::cerr << "         --mat2 | -m2 <filename>     Specify file for matrix 2\n";
+    std::cerr << "         --log  | -l  <filename>     Specify file for log\n";
     std::cerr << "         --help | -h                 Print this usage message\n";
     exit( 1 );
 }
@@ -501,6 +502,8 @@ int main( int argc, char* argv[] )
     std::string      matrix1File( "Matrix/test1.mtx" );
     std::string      matrix2File( "Matrix/test2.mtx" );
     std::string      outfile( "Matrix/result.mtx" );
+    std::string      logFile( "" );
+    
     
     int             width  = 2000;
     int             height = 2000;
@@ -540,6 +543,13 @@ int main( int argc, char* argv[] )
         else if (arg == "--mat2" || arg == "-m2") {
             if (i < argc - 1) {
                 matrix2File = argv[++i];
+            } else {
+                printUsageAndExit(argv[0]);
+            }
+        }
+        else if (arg == "--log" || arg == "-l") {
+            if (i < argc - 1) {
+                logFile = argv[++i];
             } else {
                 printUsageAndExit(argv[0]);
             }
@@ -635,7 +645,7 @@ int main( int argc, char* argv[] )
             OPTIX_CHECK( optixDeviceContextDestroy( state.context ) );
         }
         // Stop timer
-        Timing::flushTimer();
+        Timing::flushTimer(logFile);
         // auto stop = high_resolution_clock::now();
         // auto end2end = duration_cast<nanoseconds>(stop - start);  ;
         // std::cout << "END_TO_END_LATENCY = " << end2end.count() << std::endl;

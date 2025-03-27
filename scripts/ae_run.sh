@@ -5,14 +5,12 @@ OPTIX_BUILD="/home/RTSpMSpM/optixSpMSpM/build"
 CUSPARSE_DIR="/home/RTSpMSpM/cuSparse/src"
 OPTIX_DIR="/home/RTSpMSpM/optixSpMSpM"
 
-# Compile Optix SPMSPM
-cd ${OPTIX_BUILD}
-make
-# Run Optix
-${OPTIX_BUILD}/bin/optixSpMSpM -m1 "./Matrix/test1.mtx" -m2 "./Matrix/test2.mtx" -o "./test_output.mtx"
+# # Run Optix
+# cd ${OPTIX_BUILD}
+# ${OPTIX_BUILD}/bin/optixSpMSpM -m1 "./Matrix/test1.mtx" -m2 "./Matrix/test2.mtx" -o "./test_output.mtx" -l "/home/RTSpMSpM/scripts/temp.txt"
 
-# Compile cuSparse
-cd ${CUSPARSE_DIR}
-make
-${CUSPARSE_DIR}/cuSparse -m1 "${DATA_DIR}/Matrix/test1.mtx" -m2 "${DATA_DIR}/Matrix/test2.mtx" -o "${DATA_DIR}/test_output.mtx"
-#TODO: Run Cusparse 
+# # Run Cusparse 
+# cd ${CUSPARSE_DIR}
+# ${CUSPARSE_DIR}/cuSparse -m1 "${DATA_DIR}/Matrix/test1.mtx" -m2 "${DATA_DIR}/Matrix/test2.mtx" -o "${DATA_DIR}/test_output.mtx" -l "/home/RTSpMSpM/scripts/temp2.txt"
+
+python3 AE_test.py

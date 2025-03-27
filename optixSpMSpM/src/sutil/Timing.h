@@ -11,6 +11,7 @@
 #define FORCE_INLINE __attribute__((always_inline))
 #endif
 
+#include <fstream>
 #include <iostream>
 #include <stack>
 #include <unordered_map>
@@ -85,6 +86,16 @@ public:
 	{
 		// std::cout << timingHeader << "\n" << std::flush;
 		std::cout << timingOutput << std::flush;
+		Timing::timingOutput.clear();
+	}
+
+	FORCE_INLINE static void flushTimer(std::string outPath)
+	{
+		std::ofstream outFile(outPath);
+		if (!outFile) {
+			std::cerr << "Failed to open file for writing." << std::endl;
+		}
+		outFile << timingOutput << std::flush;
 		Timing::timingOutput.clear();
 	}
 };
