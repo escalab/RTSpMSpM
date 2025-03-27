@@ -16,7 +16,6 @@ NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64.sh
 **/prof/**
 !/prof/.gitkeep
 **/data/**
-!/data/download_data.sh
 !**/data/Matrix/**
 
 #ignore mtx input output file

@@ -39,6 +39,7 @@ public:
 	static std::stack<TimingHelper> m_timingStack;
 	static std::unordered_map<int, AverageTime> m_averageTimes;
 	static std::string timingOutput;
+	static std::string timingHeader;
 
 
 	static void reset()
@@ -72,7 +73,8 @@ public:
 
 			if (print)
 			{
-				Timing::timingOutput += h.name + " , " + std::to_string(t) + ", ";
+				Timing::timingHeader += h.name + ", ";
+				Timing::timingOutput += std::to_string(t);// + ", ";
 			}
 			return t;
 		}
@@ -81,37 +83,9 @@ public:
 
 	FORCE_INLINE static void flushTimer()
 	{
+		// std::cout << timingHeader << "\n" << std::flush;
 		std::cout << timingOutput << std::flush;
 		Timing::timingOutput.clear();
-	}
-	
-
-	FORCE_INLINE static void printAverageTimes()
-	{
-		std::unordered_map<int, AverageTime>::iterator iter;
-		for (iter = Timing::m_averageTimes.begin(); iter != Timing::m_averageTimes.end(); iter++)
-		{
-			AverageTime &at = iter->second;
-			const double avgTime = at.totalTime / at.counter;
-			std::cout << "Average time " << at.name.c_str() << ": " << avgTime << " ms\n" << std::flush;
-		}
-		if (Timing::m_startCounter != Timing::m_stopCounter)
-			std::cout << "Problem: " << Timing::m_startCounter << " calls of startTiming and " << Timing::m_stopCounter << " calls of stopTiming.\n " << std::flush;
-		std::cout << "---------------------------------------------------------------------------\n\n";
-	}
-
-	FORCE_INLINE static void printTimeSums()
-	{
-		std::unordered_map<int, AverageTime>::iterator iter;
-		for (iter = Timing::m_averageTimes.begin(); iter != Timing::m_averageTimes.end(); iter++)
-		{
-			AverageTime &at = iter->second;
-			const double timeSum = at.totalTime;
-			std::cout << "Time sum " << at.name.c_str() << ": " << timeSum << " ms\n" << std::flush;
-		}
-		if (Timing::m_startCounter != Timing::m_stopCounter)
-			std::cout << "Problem: " << Timing::m_startCounter << " calls of startTiming and " << Timing::m_stopCounter << " calls of stopTiming.\n " << std::flush;
-		std::cout << "---------------------------------------------------------------------------\n\n";
 	}
 };
 

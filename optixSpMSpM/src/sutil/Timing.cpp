@@ -10,3 +10,4 @@ bool Timing::m_dontPrintTimes = false;
 unsigned int Timing::m_startCounter = 0;
 unsigned int Timing::m_stopCounter = 0;
 std::string Timing::timingOutput = "";
+std::string Timing::timingHeader = "";

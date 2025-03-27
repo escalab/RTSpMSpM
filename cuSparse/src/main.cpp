@@ -97,9 +97,7 @@ void getComputeType( cusparseSpMatDescr_t mat )
 int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string outfile )
 {
     // Start timer
-    auto start = high_resolution_clock::now();
     Timing::reset();
-    Timing::startTiming("total time");
 
     // Host Matrix Definition 
     int* hA_mat_rows, *hB_mat_rows, *hC_mat_rows;
@@ -109,12 +107,10 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
     int hA_mat_num_cols, hB_mat_num_cols, hC_mat_num_cols;
     uint64_t hA_mat_nnz, hB_mat_nnz, hC_mat_nnz;
 
-    Timing::startTiming("load from file");
     cooFromFile(matrix1File, &hA_mat_rows, &hA_mat_cols, &hA_mat_values, &hA_mat_num_rows,
                 &hA_mat_num_cols, &hA_mat_nnz);
     cooFromFile(matrix2File, &hB_mat_rows, &hB_mat_cols, &hB_mat_values, &hB_mat_num_rows,
                 &hB_mat_num_cols, &hB_mat_nnz);
-    Timing::stopTiming(true);
 
     Timing::startTiming("computation time no io");
 
@@ -124,7 +120,6 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
     cusparseOperation_t opB         = CUSPARSE_OPERATION_NON_TRANSPOSE;
     cudaDataType        computeType = CUDA_R_32F;
     //--------------------------------------------------------------------------
-    Timing::startTiming("allocate device memory and copying to device");
     // Device Memory Management
     int   *dA_rows, *dA_cols, *dB_rows, *dB_cols, *dC_rows, *dC_cols;
     float *dA_values, *dB_values, *dC_values;
@@ -167,7 +162,6 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
                         cudaMemcpyHostToDevice));
     CHECK_CUDA( cudaMemcpy(dB_rows, hB_mat_rows, hB_mat_nnz * sizeof(int), 
                         cudaMemcpyHostToDevice));
-    Timing::stopTiming(true);
     //--------------------------------------------------------------------------
     // CUSPARSE APIs
     cusparseHandle_t     handle = NULL;
@@ -189,15 +183,12 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
     //                     cudaMemcpyHostToDevice));
 
     // Comment out if >64
-    Timing::startTiming("coo to csr");
     cusparseXcoo2csr(handle, dA_rows, hA_mat_nnz, hA_mat_num_rows, dA_csrPtr,
                     CUSPARSE_INDEX_BASE_ONE );
     cusparseXcoo2csr(handle, dB_rows, hB_mat_nnz, hB_mat_num_rows, dB_csrPtr,
                     CUSPARSE_INDEX_BASE_ONE );
-    Timing::stopTiming(true);
 
     // Create sparse matrix in CSR format
-    Timing::startTiming("create matrix w handle");
     CHECK_CUSPARSE( cusparseCreateCsr(&matA, hA_mat_num_rows, hA_mat_num_cols, hA_mat_nnz,
                                     dA_csrPtr, dA_cols, dA_values,
                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ONE, 
@@ -210,12 +201,10 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
                                     NULL, NULL, NULL,
                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ONE,
                                     CUDA_R_32F) );
-    Timing::stopTiming(true);
 
     //==========================================================================
     // SpGEMM Computation
     //==========================================================================
-    Timing::startTiming("Compute");
     cusparseSpGEMMDescr_t spgemmDesc;
     CHECK_CUSPARSE( cusparseSpGEMM_createDescr(&spgemmDesc) )
 
@@ -225,7 +214,6 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
                                         CUSPARSE_SPGEMM_ALG2,
                                         spgemmDesc, &bufferSize1, NULL)
     )
-    std::cout << "BufferSize" << bufferSize1 << std::endl;
     CHECK_CUDA( cudaMalloc((void**) &dBuffer1, bufferSize1) )
     
     // inspect the matrices A and B to understand the memory requirement for
@@ -275,7 +263,6 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
         cusparseCsrSetPointers(matC, dC_csrPtr, dC_cols, dC_values) )
     //--------------------------------------------------------------------------
 
-    // std::cout << 271 << std::endl;
     CHECK_CUSPARSE(
         cusparseSpGEMMreuse_copy(handle, opA, opB, matA, matB, matC,
                                 CUSPARSE_SPGEMM_ALG2, spgemmDesc,
@@ -306,16 +293,12 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
                                     matC, computeType, CUSPARSE_SPGEMM_ALG2,
                                     spgemmDesc)
     )
-    Timing::stopTiming(true);
-    Timing::startTiming("csr to coo");
-    // std::cout << 302 << std::endl;
     
     // Change csr to coo
     CHECK_CUSPARSE(
         cusparseXcsr2coo(handle, dC_csrPtr, hC_mat_nnz, hC_mat_num_rows, dC_rows,
                     CUSPARSE_INDEX_BASE_ONE)  )
     
-    // std::cout << 311 << std::endl;
     // destroy matrix/vector descriptors
     CHECK_CUSPARSE( cusparseSpGEMM_destroyDescr(spgemmDesc) )
     CHECK_CUSPARSE( cusparseDestroySpMat(matA) )
@@ -323,22 +306,17 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
     CHECK_CUSPARSE( cusparseDestroySpMat(matC) )
     cudaDeviceSynchronize();
     CHECK_CUSPARSE( cusparseDestroy(handle) )
-    // std::cout << 318 << std::endl;
+    // Finish Computation
     Timing::stopTiming(true);
     
 
     //--------------------------------------------------------------------------
-    Timing::startTiming("data transfer back to host");
     // device result load
     // int   hC_rows_tmp[hC_mat_nnz];
     int* hC_rows_tmp = (int*)malloc(hC_mat_nnz * sizeof(int));
-    // std::cout << 322 << std::endl;
     // int   hC_columns_tmp[hC_mat_nnz];
     int* hC_columns_tmp = (int*)malloc(hC_mat_nnz * sizeof(int));
-    // std::cout << 324 << std::endl;
-    std::cout << hC_mat_nnz * sizeof(float) << std::endl;
     float* hC_values_tmp = new float[hC_mat_nnz];
-    // std::cout << 326 << std::endl;
     Timing::stopTiming(true);
     // Comment out if >64
     CHECK_CUDA( cudaMemcpy(hC_rows_tmp, dC_rows, hC_mat_nnz * sizeof(int),
@@ -351,19 +329,14 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
                         cudaMemcpyDeviceToHost) )
     CHECK_CUDA( cudaMemcpy(hC_values_tmp, dC_values, hC_mat_nnz * sizeof(float),
                         cudaMemcpyDeviceToHost) )
-    // std::cout << 334 << std::endl;
-    Timing::stopTiming(true);
 
     // Uncomment if >64
     // csr_to_coo(hC_csr_row, hC_mat_num_rows, hC_mat_nnz, hC_rows_tmp, true);
     
-    Timing::startTiming("print output");
     printCooToFile(outfile, hC_rows_tmp, hC_columns_tmp, hC_values_tmp, hC_mat_num_rows, hC_mat_num_cols, hC_mat_nnz);
-    Timing::stopTiming(true);
 
     //--------------------------------------------------------------------------
     // device memory deallocation
-    Timing::startTiming("deallocation / cleanup");
     CHECK_CUDA( cudaFree(dBuffer4) )
     CHECK_CUDA( cudaFree(dBuffer5) )
     CHECK_CUDA( cudaFree(dA_csrPtr) )
@@ -378,10 +351,8 @@ int reuseCompute( std::string matrix1File, std::string matrix2File, std:: string
     free(hC_rows_tmp);
     free(hC_columns_tmp);
     free(hC_values_tmp);
-    Timing::stopTiming(true);
 
     // Stop timer
-    Timing::stopTiming(true);
     Timing::flushTimer();
     // auto stop = high_resolution_clock::now();
     // auto end2end = duration_cast<nanoseconds>(stop - start);
@@ -394,7 +365,6 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
     // Start timer
     auto start = high_resolution_clock::now();
     Timing::reset();
-    Timing::startTiming("total time");
 
     // Host Matrix Definition 
     int* hA_mat_rows, *hB_mat_rows, *hC_mat_rows;
@@ -404,12 +374,10 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
     int hA_mat_num_cols, hB_mat_num_cols, hC_mat_num_cols;
     uint64_t hA_mat_nnz, hB_mat_nnz, hC_mat_nnz;
 
-    Timing::startTiming("load from file");
     cooFromFile(matrix1File, &hA_mat_rows, &hA_mat_cols, &hA_mat_values, &hA_mat_num_rows,
                 &hA_mat_num_cols, &hA_mat_nnz);
     cooFromFile(matrix2File, &hB_mat_rows, &hB_mat_cols, &hB_mat_values, &hB_mat_num_rows,
                 &hB_mat_num_cols, &hB_mat_nnz);
-    Timing::stopTiming(true);
 
     Timing::startTiming("computation time no io");
 
@@ -419,7 +387,6 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
     cusparseOperation_t opB         = CUSPARSE_OPERATION_NON_TRANSPOSE;
     cudaDataType        computeType = CUDA_R_32F;
     //--------------------------------------------------------------------------
-    Timing::startTiming("allocate device memory and copying to device");
     // Device Memory Management
     int   *dA_rows, *dA_cols, *dB_rows, *dB_cols, *dC_rows, *dC_cols;
     float *dA_values, *dB_values, *dC_values;
@@ -457,7 +424,6 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
                         cudaMemcpyHostToDevice));
     CHECK_CUDA( cudaMemcpy(dB_rows, hB_mat_rows, hB_mat_nnz * sizeof(int), 
                         cudaMemcpyHostToDevice));
-    Timing::stopTiming(true);
     //--------------------------------------------------------------------------
     // CUSPARSE APIs
     cusparseSpGEMMAlg_t  alg    = CUSPARSE_SPGEMM_ALG3;
@@ -469,15 +435,12 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
     size_t bufferSize1 = 0,    bufferSize2 = 0,    bufferSize3 = 0;
     CHECK_CUSPARSE( cusparseCreate(&handle) );
 
-    Timing::startTiming("coo to csr");
     cusparseXcoo2csr(handle, dA_rows, hA_mat_nnz, hA_mat_num_rows, dA_csrPtr,
                     CUSPARSE_INDEX_BASE_ONE );
     cusparseXcoo2csr(handle, dB_rows, hB_mat_nnz, hB_mat_num_rows, dB_csrPtr,
                     CUSPARSE_INDEX_BASE_ONE );
-    Timing::stopTiming(true);
 
     // Create sparse matrix in CSR format
-    Timing::startTiming("create matrix w handle");
     CHECK_CUSPARSE( cusparseCreateCsr(&matA, hA_mat_num_rows, hA_mat_num_cols, hA_mat_nnz,
                                     dA_csrPtr, dA_cols, dA_values,
                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ONE, 
@@ -490,7 +453,6 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
                                     NULL, NULL, NULL,
                                     CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ONE,
                                     CUDA_R_32F) );
-    Timing::stopTiming(true);
     //--------------------------------------------------------------------------
     //--------------------------------------------------------------------------
     // SpGEMM Computation
@@ -583,22 +545,14 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
     CHECK_CUSPARSE( cusparseDestroy(handle) )
     Timing::stopTiming(true);
     //--------------------------------------------------------------------------
-    Timing::startTiming("csr to coo");
     // TODO: Change csr to coo
     // CHECK_CUSPARSE(
     //     cusparseXcsr2coo(handle, dC_csrPtr, hC_mat_nnz, hC_mat_num_rows, dC_rows,
     //                 CUSPARSE_INDEX_BASE_ONE)  )
-   
-    Timing::stopTiming(true);
-    
-
     //--------------------------------------------------------------------------
-    Timing::startTiming("data transfer back to host");
     // device result load
     int* hC_rows_tmp = (int*)malloc(hC_mat_nnz * sizeof(int));
-    // std::cout << 322 << std::endl;
     int* hC_columns_tmp = (int*)malloc(hC_mat_nnz * sizeof(int));
-    std::cout << hC_mat_nnz * sizeof(float) << std::endl;
     float* hC_values_tmp = new float[hC_mat_nnz];
     //TODO: change to coo
     // CHECK_CUDA( cudaMemcpy(hC_rows_tmp, dC_rows, hC_mat_nnz * sizeof(int),
@@ -607,11 +561,8 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
                         cudaMemcpyDeviceToHost) )
     CHECK_CUDA( cudaMemcpy(hC_values_tmp, dC_values, hC_mat_nnz * sizeof(float),
                         cudaMemcpyDeviceToHost) )
-    Timing::stopTiming(true);
     
-    Timing::startTiming("print output");
     printCooToFile(outfile, hC_rows_tmp, hC_columns_tmp, hC_values_tmp, hC_mat_num_rows, hC_mat_num_cols, hC_mat_nnz);
-    Timing::stopTiming(true);
     //--------------------------------------------------------------------------
     // device memory deallocation
     CHECK_CUDA( cudaFree(dBuffer1) )
@@ -630,7 +581,6 @@ int compute ( std::string matrix1File, std::string matrix2File, std:: string out
     free(hC_values_tmp);
 
     // Stop timer
-    Timing::stopTiming(true);
     Timing::flushTimer();
     // auto stop = high_resolution_clock::now();
     // auto end2end = duration_cast<nanoseconds>(stop - start);
@@ -690,12 +640,12 @@ int main( int argc, char* argv[] )
             if (reuseCompute(matrix1File, matrix2File, outfile) == EXIT_FAILURE) {
                 throw std::runtime_error("reuseCompute() returned EXIT_FAILURE");
             }
-            std::cerr << "Running Reuse" << "\n";
+            // std::cerr << "Running Reuse" << "\n";
         #else
             if (compute(matrix1File, matrix2File, outfile) == EXIT_FAILURE) {
                 throw std::runtime_error("compute() returned EXIT_FAILURE");
             }
-            std::cerr << "Running Compute" << "\n";
+            // std::cerr << "Running Compute" << "\n"; 
         #endif
     }
     catch( std::exception& e )
