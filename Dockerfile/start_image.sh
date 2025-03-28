@@ -22,6 +22,7 @@ docker run -d \
     --name ${CONTAINER_NAME} \
     -u $(id -u $USER):$(id -g $USER) \
     --mount type=bind,source=${SRC_DIR},target=${SRC_TARGET_DIR} \
+    --mount type=bind,source=/trace,target=/home/trace,readonly \
     ${IMAGE_NAME} 
         # --mount type=bind,source=/trace,target=/home/trace,readonly \
     # --mount type=bind,source=/usr/local/include,target=/usr/local/include,readonly \

@@ -14,7 +14,8 @@ import numpy as np
 
 # Specify path
 DATA_DIR = "/home/RTSpMSpM/optixSpMSpM/data/"
-PROF_DIR = "/home/RTSpMSpM"
+DATA_DIR = "/home/trace/sparse_matrices/suitSparse/all/"
+PROF_DIR = "/home/RTSpMSpM/result"
 TEMP_LOG = "/home/RTSpMSpM/scripts/temp.txt"
 MATRIX_SAMPLING_SCRIPT = "/home/RTSpMSpM/scripts/matrixSampling.py"
 # Dataset dict, names as keys and whether they are squared mat as values
@@ -111,7 +112,7 @@ def main():
 
     # Open the file in append mode
     PROF_FILE_PATH = os.path.join(PROF_DIR, "result.csv")
-    with open(PROF_FILE_PATH, "a") as f:
+    with open(PROF_FILE_PATH, "w") as f:
         f.write("Software, DataSet, Scenario, Runtime(ms)\n")
 
     # Iterate over each data file in the DATA_DIR
@@ -133,8 +134,9 @@ def main():
                 sys.exit(f"Error: data file not found {transpose_file_path}")
         
         # Create directory 
+        prof_path = os.path.join(PROF_DIR, f"/{data_file}/")
         result_path = os.path.join(prof_path, "result/")
-        os.makedirs(result_path, exist_ok=create_new_dir)
+        os.makedirs(result_path, exist_ok=True)
 
         success = 0
         data_path = data_file_path
@@ -151,7 +153,7 @@ def main():
             for program_name, program_path in program_list.items():
                 program_result_path = os.path.join(result_path, f"{program_name}.mtx")
                 program_prof_path = os.path.join(prof_path, f"{program_name}/")
-                os.makedirs(program_prof_path, exist_ok=create_new_dir)
+                os.makedirs(program_prof_path, exist_ok=True)
 
                 # Run the program with the data file as an argument
                 print(f"Running {program_name} ({program_path}) with input {data_path}")

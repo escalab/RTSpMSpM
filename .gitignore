@@ -22,6 +22,9 @@ NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64.sh
 *.mtx
 *.csv
 *.data*
+temp.txt
+result/**
+cuSparse/src/cuSparse
 
 /MaxK-GNN/*
 
