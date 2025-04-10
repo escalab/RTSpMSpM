@@ -3,12 +3,9 @@ DATA_DIR="/home/RTSpMSpM/optixSpMSpM/src/data"
 
 # List of dataset URLs
 urls=(
-    "https://suitesparse-collection-website.herokuapp.com/MM/Pajek/patents_main.tar.gz"
     "https://suitesparse-collection-website.herokuapp.com/MM/SNAP/p2p-Gnutella31.tar.gz"
     "https://suitesparse-collection-website.herokuapp.com/MM/SNAP/roadNet-CA.tar.gz"
     "https://suitesparse-collection-website.herokuapp.com/MM/Williams/webbase-1M.tar.gz"
-    "https://suitesparse-collection-website.herokuapp.com/MM/JGD_Homology/m133-b3.tar.gz"
-    "https://suitesparse-collection-website.herokuapp.com/MM/SNAP/cit-Patents.tar.gz"
     "https://suitesparse-collection-website.herokuapp.com/MM/GHS_indef/mario002.tar.gz"
     "https://suitesparse-collection-website.herokuapp.com/MM/SNAP/web-Google.tar.gz"
     "https://suitesparse-collection-website.herokuapp.com/MM/Hamm/scircuit.tar.gz"
@@ -46,6 +43,8 @@ for url in "${urls[@]}"; do
   else
     echo "$dirname already extracted. Skipping."
   fi
+
+  rm -f "$filename"
 done
 
 echo "All datasets downloaded and extracted."

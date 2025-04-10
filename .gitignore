@@ -15,8 +15,10 @@ NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64.sh
 !/output/.gitkeep
 **/prof/**
 !/prof/.gitkeep
-**/data/**
-!**/data/Matrix/**
+# **/data/**
+# !**/data/Matrix/**
+**/data/**/*.txt
+**/move.sh
 
 #ignore mtx input output file
 *.mtx
@@ -25,6 +27,7 @@ NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64.sh
 temp.txt
 result/**
 cuSparse/src/cuSparse
+!**/*_small.mtx
 
 /MaxK-GNN/*
 

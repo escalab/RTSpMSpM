@@ -14,42 +14,44 @@ import numpy as np
 
 # Specify path
 DATA_DIR = "/home/RTSpMSpM/optixSpMSpM/data/"
-PROF_DIR = "/home/RTSpMSpM/result"
-TEMP_LOG = "/home/RTSpMSpM/scripts/temp.txt"
+# DATA_DIR="/home/trace/hoz006/RTSPMSPM"
+PROF_DIR = "/home/RTSpMSpM/result_lapras"
+TEMP_LOG = "/home/RTSpMSpM/scripts/temp_lapras.txt"
 MATRIX_SAMPLING_SCRIPT = "/home/RTSpMSpM/scripts/matrixSampling.py"
 # Dataset dict, names as keys and whether they are squared mat as values
 dataset = {
-    "p2p-Gnutella31"   : True,
+    "p2p-Gnutella31"   : True, #o
     "roadNet-CA"       : True, 
-    "webbase-1M"       : True,    
+    "webbase-1M"       : True, 
     "mario002"         : True,    
     "web-Google"       : True,  
-    "scircuit"         : True,    
+    "scircuit"         : True, #o
     "amazon0312"       : True, 
-    "ca-CondMat"       : True, 
-    "email-Enron"      : True,
+    "ca-CondMat"       : True, #o
+    "email-Enron"      : True, #o
     "wiki-Vote"        : True,
     "cage12"           : True,    
     "2cubes_sphere"    : True,    
     "offshore"         : True,    
     "cop20k_A"         : True,    
     "filter3D"         : True,    
-    "poisson3Da"       : True      
+    "poisson3Da"       : True  
 }
 for root, _, files in os.walk(DATA_DIR):
     for file in files:
         if file.endswith(".mtx"):
             dataset_name = os.path.splitext(file)[0]  # Get filename without extension
-            dataset[dataset_name] = True  # Assume all matrices are squared for now
+            if dataset_name in dataset:  # Check against existing dictionary
+                dataset[dataset_name] = True  # Assume all matrices are squared for now
 print(f"Discovered datasets: {list(dataset.keys())}")
 
 
 # Dictionary of programs with program names as keys and binary paths as values
 program_list = {
-    "optixSpMSpM"     : "/home/RTSpMSpM/optixSpMSpM/build/bin/optixSpMSpM",
-    "cuSparse"        : "/home/RTSpMSpM/cuSparse/src/cuSparse"
+    "cuSparse"        : "/home/RTSpMSpM/cuSparse/src/cuSparse",
+    "optixSpMSpM"     : "/home/RTSpMSpM/optixSpMSpM/build/bin/optixSpMSpM"
 }
-num_run = 1
+num_run = 5
 
 """
 Extract the top-left quarter of a matrix.
@@ -77,12 +79,12 @@ def sample_top_left(input_file, output_file):
     
     if top_left_matrix.nnz == 0:
         # sys.exit("Error: matrix has no elements")
-        print("Error: matrix has no elements")
+        # print("Error: matrix has no elements")
         return False
     
     # Write the top-left portion to the output file
     mmwrite(output_file, top_left_matrix)
-    print(f"Top-left portion saved to {output_file}")
+    # print(f"Top-left portion saved to {output_file}")
     return True
 
 
@@ -91,15 +93,15 @@ def run_matrix_sampling(input_matrix, output_matrix):
     Reduces the matrix size using the matrixSampling script.
     """
     try:
-        print(f"Running matrix sampling: {input_matrix} -> {output_matrix}")
+        # print(f"Running matrix sampling: {input_matrix} -> {output_matrix}")
         # Call the sample_top_left function directly
         if sample_top_left(input_matrix, output_matrix):
-            print(f"Matrix sampling completed successfully: {input_matrix} -> {output_matrix}")
+            # print(f"Matrix sampling completed successfully: {input_matrix} -> {output_matrix}")
             return True
         else:
             return False
     except Exception as e:
-        print(f"Error during matrix sampling: {e}")
+        # print(f"Error during matrix sampling: {e}")
         sys.exit(1)  # Exit the script if sampling fails
 
 
@@ -109,7 +111,8 @@ def main():
     optix_not_failed_data = {}
 
     # Open the file in append mode
-    PROF_FILE_PATH = os.path.join(PROF_DIR, "result.csv")
+    PROF_FILE_PATH = os.path.join(PROF_DIR, "result_lapras.csv")
+    os.makedirs(os.path.dirname(PROF_FILE_PATH), exist_ok=True)
     with open(PROF_FILE_PATH, "w") as f:
         f.write("Software, DataSet, Scenario, Runtime(ms)\n")
 
@@ -136,15 +139,17 @@ def main():
         result_path = os.path.join(prof_path, "result/")
         os.makedirs(result_path, exist_ok=True)
 
-        success = 0
         data_path = data_file_path
+        data_dir_path = os.path.join(DATA_DIR, f"{data_file}")
         # If we tested this with the edited dataset
-        if os.path.isfile(os.path.join(result_path, f"{data_file}_small.mtx")):
-            data_path = os.path.join(result_path, f"{data_file}_small.mtx")
+        if os.path.isfile(os.path.join(data_dir_path, f"{data_file}_small.mtx")):
+            data_path = os.path.join(data_dir_path, f"{data_file}_small.mtx")
 
+        success = False
         while not success:
-            failed = False
-            print("Working...")
+            # failed = False
+            program_success_flags = {program_name: False for program_name in program_list}
+            # print("Working...")
             out_buff = ""
 
             # Iterate over each program
@@ -154,9 +159,9 @@ def main():
                 os.makedirs(program_prof_path, exist_ok=True)
 
                 # Run the program with the data file as an argument
-                print(f"Running {program_name} ({program_path}) with input {data_path}")
-                try:
-                    for i in range(num_run):
+                # print(f"Running {program_name} ({program_path}) with input {data_path}")
+                for i in range(num_run):
+                    try:
                         out_matrix_path = os.path.join(result_path, f"{program_name}.mtx")
                         out_buff += program_name + ", " + data_file + ", " + f"run{i}, "
                         if is_squared:
@@ -165,44 +170,57 @@ def main():
                                 rel_data_path = os.path.relpath(data_path, start=os.path.dirname(program_path))
                                 subprocess.run(
                                     [program_path, "-m1", f"{rel_data_path}", "-m2", f"{rel_data_path}", "-o", out_matrix_path, "-l", TEMP_LOG],
-                                    check=True
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
                                 )
                             else:
                                 subprocess.run(
                                     [program_path, "-m1", f"{data_path}", "-m2", f"{data_path}", "-o", out_matrix_path, "-l", TEMP_LOG],
-                                    check=True
+                                    stdout=subprocess.DEVNULL, check=True, stderr=subprocess.DEVNULL
                                 )
                         else:
                             sys.exit(f"Error: unable to run not squared matrix TODO")
                         with open(TEMP_LOG, "r") as file:
                             content = file.read()
                             out_buff += content + "\n"
-                except subprocess.CalledProcessError as e:
-                    print(f"Error running {program_name} with {data_file_path} : {e}\n")
-                    # If optix failed, reduce size
-                    # If optix have not failed but others did, then record
-                    if "optix" not in program_name and not failed:
-                        if program_name not in optix_not_failed_data:
-                            optix_not_failed_data[program_name] = set()
-                        # Add the failing data file to the program's set
-                        optix_not_failed_data[program_name].add(data_file)
-                    else:
-                        failed = True
+                        program_success_flags[program_name] = True
+                    except subprocess.CalledProcessError as e:
+                        # print(f"Error running {program_name} with {data_file_path} : {e}\n")
+                        # If optix failed, reduce size
+                        # If optix have not failed but others did, then record
+                        if "optix" not in program_name:
+                            if program_name not in optix_not_failed_data:
+                                optix_not_failed_data[program_name] = set()
+                            # Add the failing data file to the program's set
+                            optix_not_failed_data[program_name].add(data_file)
+                        out_buff += content + "\n"
 
             # Reduce the size if optix failed
-            if failed:
-                # Perform matrix sampling and restart
-                # print("Reducing matrix size due to failure.")
-                sampled_file_path = os.path.join(result_path, f"{data_file}_small.mtx")
-                if not run_matrix_sampling(data_path, sampled_file_path):
-                    all_failed_data_files.add(data_file)
-                    break
-                data_path = sampled_file_path  # Use the reduced matrix for further runs
-            else:
-                success = 1
+            # if failed:
+            #     # Perform matrix sampling and restart
+            #     # print("Reducing matrix size due to failure.")
+            #     sampled_file_path = os.path.join(result_path, f"{data_file}_small.mtx")
+            #     if not run_matrix_sampling(data_path, sampled_file_path):
+            #         all_failed_data_files.add(data_file)
+            #         break
+            #     data_path = sampled_file_path  # Use the reduced matrix for further runs
+            # else:
+            #     success = True
+            #     with open(PROF_FILE_PATH, "a") as output_file:
+            #         output_file.write(out_buff)
+            #     print(f"All programs succeeded for {data_file}")
+            if all(program_success_flags.values()):
+                success = True
                 with open(PROF_FILE_PATH, "a") as output_file:
                     output_file.write(out_buff)
                 print(f"All programs succeeded for {data_file}")
+            else:
+                sampled_file_path = os.path.join(data_dir_path, f"{data_file}_small.mtx")
+                print(f"Some programs failed. Reducing matrix and retrying: {data_file}")
+                if not run_matrix_sampling(data_dir_path, sampled_file_path):
+                    all_failed_data_files.add(data_file)
+                    break
+                data_path = sampled_file_path
+
     
     # print("Data files that caused error (no elements after sampling):", all_failed_data_files)
 
