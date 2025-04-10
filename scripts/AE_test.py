@@ -10,13 +10,16 @@ import sys
 import argparse
 from scipy.io import mmread, mmwrite
 import numpy as np
+import csv
+from collections import defaultdict
+import pandas as pd
 
 
 # Specify path
-DATA_DIR = "/home/RTSpMSpM/optixSpMSpM/data/"
+DATA_DIR = "/home/RTSpMSpM/optixSpMSpM/src/data/"
 # DATA_DIR="/home/trace/hoz006/RTSPMSPM"
-PROF_DIR = "/home/RTSpMSpM/result_lapras"
-TEMP_LOG = "/home/RTSpMSpM/scripts/temp_lapras.txt"
+PROF_DIR = "/home/RTSpMSpM/result"
+TEMP_LOG = "/home/RTSpMSpM/scripts/temp.txt"
 MATRIX_SAMPLING_SCRIPT = "/home/RTSpMSpM/scripts/matrixSampling.py"
 # Dataset dict, names as keys and whether they are squared mat as values
 dataset = {
@@ -51,7 +54,21 @@ program_list = {
     "cuSparse"        : "/home/RTSpMSpM/cuSparse/src/cuSparse",
     "optixSpMSpM"     : "/home/RTSpMSpM/optixSpMSpM/build/bin/optixSpMSpM"
 }
-num_run = 5
+num_run = 20
+
+def average_runtime_to_csv(filepath, outpath):
+    # Read CSV file
+    df = pd.read_csv(filepath)
+    
+    # Convert Runtime to numeric, forcing invalid (blank) entries to NaN
+    df["Runtime(ms)"] = pd.to_numeric(df["Runtime(ms)"], errors="coerce")
+
+    # Group by Software and DataSet, then average Runtime, ignoring NaN
+    avg_df = df.groupby(["Software", "DataSet"], as_index=False)["Runtime(ms)"].mean()
+
+    # Save the averaged result to the output CSV
+    avg_df.to_csv(outpath, index=False)
+
 
 """
 Extract the top-left quarter of a matrix.
@@ -104,17 +121,35 @@ def run_matrix_sampling(input_matrix, output_matrix):
         # print(f"Error during matrix sampling: {e}")
         sys.exit(1)  # Exit the script if sampling fails
 
-
+def compute_speedup(filepath, outpath):
+    # Read CSV
+    df = pd.read_csv(filepath)
+    
+    # Strip any extra whitespace in column values
+    df["Software"] = df["Software"].str.strip()
+    df["DataSet"] = df["DataSet"].str.strip()
+    
+    # Pivot table: rows = DataSet, columns = Software
+    pivot = df.pivot(index="DataSet", columns="Software", values="Runtime(ms)")
+    
+    # Calculate speedup: cuSparse / optixSpMSpM
+    pivot["Speedup (cuSparse / optixSpMSpM)"] = pivot["cuSparse"] / pivot["optixSpMSpM"]
+    
+    # Reset index to turn DataSet back into a column
+    pivot.reset_index(inplace=True)
+    
+    # Save to CSV
+    pivot.to_csv(outpath, index=False)
 
 def main():
     all_failed_data_files = set()
     optix_not_failed_data = {}
 
     # Open the file in append mode
-    PROF_FILE_PATH = os.path.join(PROF_DIR, "result_lapras.csv")
+    PROF_FILE_PATH = os.path.join(PROF_DIR, "all_result.csv")
     os.makedirs(os.path.dirname(PROF_FILE_PATH), exist_ok=True)
     with open(PROF_FILE_PATH, "w") as f:
-        f.write("Software, DataSet, Scenario, Runtime(ms)\n")
+        f.write("Software,DataSet,Scenario,Runtime(ms)\n")
 
     # Iterate over each data file in the DATA_DIR
     for data_file in dataset:
@@ -141,6 +176,7 @@ def main():
 
         data_path = data_file_path
         data_dir_path = os.path.join(DATA_DIR, f"{data_file}")
+        data_dir_path = result_path
         # If we tested this with the edited dataset
         if os.path.isfile(os.path.join(data_dir_path, f"{data_file}_small.mtx")):
             data_path = os.path.join(data_dir_path, f"{data_file}_small.mtx")
@@ -170,12 +206,12 @@ def main():
                                 rel_data_path = os.path.relpath(data_path, start=os.path.dirname(program_path))
                                 subprocess.run(
                                     [program_path, "-m1", f"{rel_data_path}", "-m2", f"{rel_data_path}", "-o", out_matrix_path, "-l", TEMP_LOG],
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
+                                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                                 )
                             else:
                                 subprocess.run(
                                     [program_path, "-m1", f"{data_path}", "-m2", f"{data_path}", "-o", out_matrix_path, "-l", TEMP_LOG],
-                                    stdout=subprocess.DEVNULL, check=True, stderr=subprocess.DEVNULL
+                                     check=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
                                 )
                         else:
                             sys.exit(f"Error: unable to run not squared matrix TODO")
@@ -184,7 +220,7 @@ def main():
                             out_buff += content + "\n"
                         program_success_flags[program_name] = True
                     except subprocess.CalledProcessError as e:
-                        # print(f"Error running {program_name} with {data_file_path} : {e}\n")
+                        print(f"Error running {program_name} with {data_file_path} : {e}\n")
                         # If optix failed, reduce size
                         # If optix have not failed but others did, then record
                         if "optix" not in program_name:
@@ -192,7 +228,7 @@ def main():
                                 optix_not_failed_data[program_name] = set()
                             # Add the failing data file to the program's set
                             optix_not_failed_data[program_name].add(data_file)
-                        out_buff += content + "\n"
+                        out_buff += "\n"
 
             # Reduce the size if optix failed
             # if failed:
@@ -218,8 +254,9 @@ def main():
                 print(f"Some programs failed. Reducing matrix and retrying: {data_file}")
                 if not run_matrix_sampling(data_dir_path, sampled_file_path):
                     all_failed_data_files.add(data_file)
-                    break
+                    # break
                 data_path = sampled_file_path
+
 
     
     # print("Data files that caused error (no elements after sampling):", all_failed_data_files)
@@ -230,7 +267,11 @@ def main():
             print(f"  {program}: {', '.join(failed_files)}")
     else:
         print("\nAll programs succeeded without failures while OptiX was successful.")
-
+    outpath = PROF_DIR + "/avg_result.csv"
+    final_path = PROF_DIR + "/final_result.csv"
+    average_runtime_to_csv(PROF_FILE_PATH, outpath)
+    compute_speedup(outpath, final_path)
+    
 
 if __name__ == "__main__":
     main()

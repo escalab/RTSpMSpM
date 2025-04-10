@@ -22,6 +22,7 @@ urls=(
 )
 
 mkdir -p ${DATA_DIR}
+mkdir /home/RTSpMSpM/result
 cd ${DATA_DIR}
 
 # Download and extract each file
