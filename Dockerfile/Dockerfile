@@ -19,7 +19,7 @@ RUN mkdir -p ~/miniconda3 && \
     bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && \
     rm -rf ~/miniconda3/miniconda.sh && \
     apt-get install -y gnuplot && \
-    pip3 install numpy scipy
+    pip3 install numpy scipy pandas
 
 # Download and install Nsight Systems
 # Install required dependencies
