@@ -220,7 +220,7 @@ def main():
                             out_buff += content + "\n"
                         program_success_flags[program_name] = True
                     except subprocess.CalledProcessError as e:
-                        print(f"Error running {program_name} with {data_file_path} : {e}\n")
+                        # print(f"Error running {program_name} with {data_file_path} : {e}\n")
                         # If optix failed, reduce size
                         # If optix have not failed but others did, then record
                         if "optix" not in program_name:
